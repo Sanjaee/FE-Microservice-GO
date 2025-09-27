@@ -94,21 +94,51 @@ export const LoginForm = () => {
         router.push(callbackUrl);
       } else {
         let errorMessage = "Email atau password salah. Silakan coba lagi.";
+        let errorTitle = "❌ Login Gagal";
 
         // Handle specific error messages
         if (result?.error) {
-          if (result.error.includes("This account was created with Google")) {
+          // Check for specific error messages from our backend
+          if (
+            result.error.includes("Akun ini dibuat dengan Google") ||
+            result.error.includes("Account type mismatch")
+          ) {
             errorMessage =
-              "This account was created with Google. Please use Google sign-in instead.";
+              "Akun ini dibuat dengan Google. Silakan gunakan tombol 'Masuk dengan Google' untuk login.";
+            errorTitle = "⚠️ Tipe Akun Tidak Cocok";
+          } else if (
+            result.error.includes("Password yang Anda masukkan salah")
+          ) {
+            errorMessage =
+              "Password yang Anda masukkan salah. Silakan coba lagi.";
+            errorTitle = "🔒 Password Salah";
+          } else if (result.error.includes("Email tidak terdaftar")) {
+            errorMessage =
+              "Email tidak terdaftar. Silakan periksa kembali email Anda atau daftar akun baru.";
+            errorTitle = "👤 Email Tidak Ditemukan";
+          } else if (result.error.includes("Invalid password")) {
+            errorMessage =
+              "Password yang Anda masukkan salah. Silakan coba lagi.";
+            errorTitle = "🔒 Password Salah";
+          } else if (result.error.includes("User not found")) {
+            errorMessage =
+              "Email tidak terdaftar. Silakan periksa kembali email Anda atau daftar akun baru.";
+            errorTitle = "👤 Email Tidak Ditemukan";
           } else if (result.error.includes("Invalid credentials")) {
             errorMessage = "Email atau password salah. Silakan coba lagi.";
+            errorTitle = "❌ Login Gagal";
+          } else if (result.error === "CredentialsSignin") {
+            // Fallback for generic credentials error
+            errorMessage = "Email atau password salah. Silakan coba lagi.";
+            errorTitle = "❌ Login Gagal";
           } else {
+            // Use the error message directly if it's from our backend
             errorMessage = result.error;
           }
         }
 
         toast({
-          title: "❌ Login Gagal",
+          title: errorTitle,
           description: errorMessage,
           variant: "destructive",
         });

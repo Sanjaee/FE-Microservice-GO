@@ -68,15 +68,13 @@ export const authOptions: NextAuthOptions = {
           };
         } catch (error) {
           console.error("Authentication error:", error);
-          
-          // Check if it's a specific error from our backend
+
+          // Check if it's a specific error from our backend and throw it
           if (error instanceof Error) {
-            if (error.message.includes("This account was created with Google")) {
-              // This will trigger the error message in the frontend
-              throw new Error("This account was created with Google. Please use Google sign-in instead.");
-            }
+            // Pass through the specific error message from our backend
+            throw new Error(error.message);
           }
-          
+
           return null;
         }
       },
