@@ -1,6 +1,7 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { useSession } from "next-auth/react";
 import { Navbar } from "@/components/Navbar";
+import { ProductCard } from "@/components/ProductCard";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -10,153 +11,215 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { ShoppingBag, Truck, Shield, Heart } from "lucide-react";
+import { ShoppingBag, Truck, Shield, Heart, Loader2 } from "lucide-react";
 import Link from "next/link";
+import { apiClient, Product } from "@/lib/api-client";
 
 export default function HomePage() {
   const { data: session } = useSession();
+
+  // State management for products
+  const [products, setProducts] = useState<Product[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [hasMore, setHasMore] = useState(true);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const [total, setTotal] = useState(0);
+
+  // Fetch products on component mount
+  useEffect(() => {
+    fetchProducts();
+  }, []);
+
+  const fetchProducts = async (page = 1, append = false) => {
+    try {
+      if (!append) {
+        setLoading(true);
+      }
+      setError(null);
+
+      const response = await apiClient.getProducts({
+        page,
+        limit: 100,
+        is_active: true,
+      });
+
+      if (response.success) {
+        const data = response.data;
+        if (append) {
+          setProducts((prev) => [...prev, ...data.products]);
+        } else {
+          setProducts(data.products);
+        }
+        setHasMore(data.has_more);
+        setTotal(data.total);
+        setCurrentPage(page);
+      } else {
+        throw new Error("Failed to fetch products");
+      }
+    } catch (err) {
+      console.error("Error fetching products:", err);
+      setError(err instanceof Error ? err.message : "Failed to load products");
+    } finally {
+      if (!append) {
+        setLoading(false);
+      }
+    }
+  };
+
+  const loadMore = async () => {
+    if (isLoadingMore || !hasMore) return;
+
+    setIsLoadingMore(true);
+    try {
+      await fetchProducts(currentPage + 1, true);
+    } finally {
+      setIsLoadingMore(false);
+    }
+  };
+
+  const refresh = () => {
+    setProducts([]);
+    setCurrentPage(1);
+    setHasMore(true);
+    fetchProducts(1, false);
+  };
+
+  useEffect(() => {
+    const handleScroll = () => {
+      if (
+        window.innerHeight + window.scrollY >=
+          document.body.offsetHeight - 200 &&
+        hasMore &&
+        !isLoadingMore &&
+        !loading
+      ) {
+        loadMore();
+      }
+    };
+    window.addEventListener("scroll", handleScroll);
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, [hasMore, isLoadingMore, loading, currentPage]);
+
+  // Product handlers
+  const handleViewDetails = (product: Product) => {
+    // TODO: Navigate to product detail page
+    console.log("View details for product:", product.id);
+  };
+
+  const handleAddToCart = (product: Product) => {
+    // TODO: Add to cart functionality
+    console.log("Add to cart:", product.id);
+  };
+
+  const handleAddToWishlist = (product: Product) => {
+    // TODO: Add to wishlist functionality
+    console.log("Add to wishlist:", product.id);
+  };
+
+  // Show loading skeleton for initial load
+  if (loading && products.length === 0) {
+    return (
+      <div className="min-h-screen bg-gray-50">
+        <Navbar />
+        <section className="py-16 bg-gray-50">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+              {Array.from({ length: 8 }).map((_, idx) => (
+                <div
+                  key={`skeleton-${idx}`}
+                  className="bg-white rounded-lg shadow-md p-4 animate-pulse"
+                >
+                  <div className="h-48 bg-gray-200 rounded mb-4"></div>
+                  <div className="h-4 bg-gray-200 rounded mb-2"></div>
+                  <div className="h-4 bg-gray-200 rounded w-3/4 mb-2"></div>
+                  <div className="h-4 bg-gray-200 rounded w-1/2"></div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-50">
       <Navbar />
 
-      {/* Hero Section */}
-      <section className="bg-gradient-to-r from-blue-600 to-purple-600 text-white">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-24">
-          <div className="text-center">
-            <h1 className="text-4xl md:text-6xl font-bold mb-6">
-              Welcome to ZACloth
-            </h1>
-            <p className="text-xl md:text-2xl mb-8 text-blue-100">
-              Discover the latest fashion trends and style your perfect look
-            </p>
-            <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <Button
-                size="lg"
-                asChild
-                className="bg-white text-blue-600 hover:bg-gray-100"
-              >
-                <Link href="/products">Shop Now</Link>
-              </Button>
-              <Button
-                size="lg"
-                variant="outline"
-                className="border-white text-white hover:bg-white hover:text-blue-600"
-              >
-                Learn More
-              </Button>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Features Section */}
-      <section className="py-16 bg-white">
+      {/* Products Section */}
+      <section className="py-16 bg-gray-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-12">
-            <h2 className="text-3xl font-bold text-gray-900 mb-4">
-              Why Choose ZACloth?
-            </h2>
-            <p className="text-lg text-gray-600">
-              We provide the best shopping experience with quality products and
-              excellent service
-            </p>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
-            <Card className="text-center hover:shadow-lg transition-shadow">
-              <CardHeader>
-                <div className="mx-auto w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center mb-4">
-                  <ShoppingBag className="w-6 h-6 text-blue-600" />
-                </div>
-                <CardTitle className="text-lg">Wide Selection</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <CardDescription>
-                  Thousands of products from top brands to choose from
-                </CardDescription>
-              </CardContent>
-            </Card>
-
-            <Card className="text-center hover:shadow-lg transition-shadow">
-              <CardHeader>
-                <div className="mx-auto w-12 h-12 bg-green-100 rounded-full flex items-center justify-center mb-4">
-                  <Truck className="w-6 h-6 text-green-600" />
-                </div>
-                <CardTitle className="text-lg">Fast Delivery</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <CardDescription>
-                  Quick and reliable shipping to your doorstep
-                </CardDescription>
-              </CardContent>
-            </Card>
-
-            <Card className="text-center hover:shadow-lg transition-shadow">
-              <CardHeader>
-                <div className="mx-auto w-12 h-12 bg-purple-100 rounded-full flex items-center justify-center mb-4">
-                  <Shield className="w-6 h-6 text-purple-600" />
-                </div>
-                <CardTitle className="text-lg">Secure Payment</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <CardDescription>
-                  Safe and secure payment methods for your peace of mind
-                </CardDescription>
-              </CardContent>
-            </Card>
-
-            <Card className="text-center hover:shadow-lg transition-shadow">
-              <CardHeader>
-                <div className="mx-auto w-12 h-12 bg-red-100 rounded-full flex items-center justify-center mb-4">
-                  <Heart className="w-6 h-6 text-red-600" />
-                </div>
-                <CardTitle className="text-lg">Customer Care</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <CardDescription>
-                  24/7 customer support to help you with any questions
-                </CardDescription>
-              </CardContent>
-            </Card>
-          </div>
-        </div>
-      </section>
-
-      {/* CTA Section */}
-      <section className="py-16 bg-blue-600 text-white">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <h2 className="text-3xl font-bold mb-4">Ready to Start Shopping?</h2>
-          <p className="text-xl mb-8 text-blue-100">
-            Join thousands of satisfied customers and discover your new favorite
-            style
-          </p>
-          {!session ? (
-            <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <Button
-                size="lg"
-                variant="outline"
-                className="border-white text-white hover:bg-white hover:text-blue-600"
-                asChild
-              >
-                <Link href="/register">Create Account</Link>
-              </Button>
-              <Button
-                size="lg"
-                className="bg-white text-blue-600 hover:bg-gray-100"
-                asChild
-              >
-                <Link href="/login">Sign In</Link>
-              </Button>
+          {error && (
+            <div className="text-center mb-8">
+              <div className="bg-red-50 border border-red-200 rounded-lg p-4 max-w-md mx-auto">
+                <p className="text-red-600">Error loading products: {error}</p>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={refresh}
+                  className="mt-2"
+                >
+                  Try Again
+                </Button>
+              </div>
             </div>
-          ) : (
-            <Button
-              size="lg"
-              className="bg-white text-blue-600 hover:bg-gray-100"
-              asChild
-            >
-              <Link href="/dashboard">Go to Dashboard</Link>
-            </Button>
+          )}
+
+          {products.length > 0 && (
+            <>
+              <div className="mb-6 text-center">
+                <Badge variant="secondary" className="text-sm">
+                  {total} products available
+                </Badge>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                {products.map((product) => (
+                  <ProductCard
+                    key={product.id}
+                    product={product}
+                    onViewDetails={handleViewDetails}
+                    onAddToCart={handleAddToCart}
+                    onAddToWishlist={handleAddToWishlist}
+                  />
+                ))}
+                {isLoadingMore &&
+                  Array.from({ length: 4 }).map((_, idx) => (
+                    <div
+                      key={`skeleton-${idx}`}
+                      className="bg-white rounded-lg shadow-md p-4 animate-pulse"
+                    >
+                      <div className="h-48 bg-gray-200 rounded mb-4"></div>
+                      <div className="h-4 bg-gray-200 rounded mb-2"></div>
+                      <div className="h-4 bg-gray-200 rounded w-3/4 mb-2"></div>
+                      <div className="h-4 bg-gray-200 rounded w-1/2"></div>
+                    </div>
+                  ))}
+              </div>
+
+              {/* End of results */}
+              {!hasMore && products.length > 0 && (
+                <div className="text-center py-8">
+                  <p className="text-gray-500">
+                    You've reached the end of the products list
+                  </p>
+                </div>
+              )}
+            </>
+          )}
+
+          {!loading && products.length === 0 && !error && (
+            <div className="text-center py-12">
+              <ShoppingBag className="h-16 w-16 text-gray-300 mx-auto mb-4" />
+              <h3 className="text-lg font-medium text-gray-900 mb-2">
+                No products found
+              </h3>
+              <p className="text-gray-500">
+                Check back later for new arrivals!
+              </p>
+            </div>
           )}
         </div>
       </section>

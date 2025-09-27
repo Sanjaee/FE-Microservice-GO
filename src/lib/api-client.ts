@@ -54,6 +54,47 @@ export interface ResendOTPResponse {
   message: string;
 }
 
+// Product interfaces
+export interface ProductImage {
+  id: string;
+  product_id: string;
+  image_url: string;
+  created_at: string;
+}
+
+export interface Product {
+  id: string;
+  user_id: string;
+  user: User;
+  name: string;
+  description: string;
+  price: number;
+  stock: number;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+  images: ProductImage[];
+}
+
+export interface ProductListResponse {
+  products: Product[];
+  total: number;
+  page: number;
+  limit: number;
+  has_more: boolean;
+  next_cursor?: string;
+}
+
+export interface ProductQuery {
+  page?: number;
+  limit?: number;
+  cursor?: string;
+  search?: string;
+  min_price?: number;
+  max_price?: number;
+  is_active?: boolean;
+}
+
 class ApiClient {
   private baseURL: string;
   private accessToken: string | null = null;
@@ -192,6 +233,32 @@ class ApiClient {
         body: JSON.stringify(data),
       }
     );
+  }
+
+  // Product endpoints
+  async getProducts(query: ProductQuery = {}): Promise<{ success: boolean; data: ProductListResponse; meta: any }> {
+    const params = new URLSearchParams();
+    
+    if (query.page) params.append('page', query.page.toString());
+    if (query.limit) params.append('limit', query.limit.toString());
+    if (query.cursor) params.append('cursor', query.cursor);
+    if (query.search) params.append('search', query.search);
+    if (query.min_price) params.append('min_price', query.min_price.toString());
+    if (query.max_price) params.append('max_price', query.max_price.toString());
+    if (query.is_active !== undefined) params.append('is_active', query.is_active.toString());
+    
+    const queryString = params.toString();
+    const endpoint = queryString ? `/api/v1/products?${queryString}` : '/api/v1/products';
+    
+    return this.request<{ success: boolean; data: ProductListResponse; meta: any }>(endpoint, {
+      method: "GET",
+    });
+  }
+
+  async getProductById(id: string): Promise<{ success: boolean; data: Product; meta: any }> {
+    return this.request<{ success: boolean; data: Product; meta: any }>(`/api/v1/products/${id}`, {
+      method: "GET",
+    });
   }
 
   // Health check
