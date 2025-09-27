@@ -1,17 +1,17 @@
-import NextAuth, { NextAuthOptions } from 'next-auth';
-import CredentialsProvider from 'next-auth/providers/credentials';
-import { api, TokenManager } from '../../../lib/api';
+import NextAuth, { NextAuthOptions } from "next-auth";
+import CredentialsProvider from "next-auth/providers/credentials";
+import { api, TokenManager } from "../../../lib/api";
 
 export const authOptions: NextAuthOptions = {
   providers: [
     CredentialsProvider({
-      id: 'credentials',
-      name: 'credentials',
+      id: "credentials",
+      name: "credentials",
       credentials: {
-        email: { label: 'Email', type: 'email' },
-        password: { label: 'Password', type: 'password' },
-        accessToken: { label: 'Access Token', type: 'text' },
-        refreshToken: { label: 'Refresh Token', type: 'text' },
+        email: { label: "Email", type: "email" },
+        password: { label: "Password", type: "password" },
+        accessToken: { label: "Access Token", type: "text" },
+        refreshToken: { label: "Refresh Token", type: "text" },
       },
       async authorize(credentials) {
         try {
@@ -24,11 +24,11 @@ export const authOptions: NextAuthOptions = {
                 email: profile.user.email,
                 name: profile.user.username,
                 accessToken: credentials.accessToken,
-                refreshToken: credentials.refreshToken || '',
+                refreshToken: credentials.refreshToken || "",
                 isVerified: profile.user.is_verified,
               };
             } catch (error) {
-              console.error('Token validation failed:', error);
+              console.error("Token validation failed:", error);
               return null;
             }
           }
@@ -44,7 +44,10 @@ export const authOptions: NextAuthOptions = {
           });
 
           // Store tokens in localStorage
-          TokenManager.setTokens(authResponse.access_token, authResponse.refresh_token);
+          TokenManager.setTokens(
+            authResponse.access_token,
+            authResponse.refresh_token
+          );
 
           return {
             id: authResponse.user.id,
@@ -55,7 +58,7 @@ export const authOptions: NextAuthOptions = {
             isVerified: authResponse.user.is_verified,
           };
         } catch (error) {
-          console.error('Authentication error:', error);
+          console.error("Authentication error:", error);
           return null;
         }
       },
@@ -70,6 +73,7 @@ export const authOptions: NextAuthOptions = {
           accessToken: user.accessToken,
           refreshToken: user.refreshToken,
           isVerified: user.isVerified,
+          accessTokenExpires: Date.now() + 15 * 60 * 1000, // 15 minutes
         };
       }
 
@@ -90,27 +94,28 @@ export const authOptions: NextAuthOptions = {
     },
   },
   pages: {
-    signIn: '/login',
-    error: '/login',
+    signIn: "/login",
+    error: "/login",
   },
   session: {
-    strategy: 'jwt',
+    strategy: "jwt",
     maxAge: 7 * 24 * 60 * 60, // 7 days
   },
   jwt: {
     maxAge: 7 * 24 * 60 * 60, // 7 days
   },
   secret: process.env.NEXTAUTH_SECRET,
+  debug: process.env.NODE_ENV === "development",
 };
 
 async function refreshAccessToken(token: any) {
   try {
     const refreshedTokens = await api.refreshToken(token.refreshToken);
-    
+
     if (!refreshedTokens) {
       return {
         ...token,
-        error: 'RefreshAccessTokenError',
+        error: "RefreshAccessTokenError",
       };
     }
 
@@ -121,10 +126,10 @@ async function refreshAccessToken(token: any) {
       refreshToken: refreshedTokens.refresh_token ?? token.refreshToken,
     };
   } catch (error) {
-    console.error('Error refreshing access token:', error);
+    console.error("Error refreshing access token:", error);
     return {
       ...token,
-      error: 'RefreshAccessTokenError',
+      error: "RefreshAccessTokenError",
     };
   }
 }

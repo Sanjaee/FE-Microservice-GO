@@ -15,7 +15,7 @@ import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { toast } from "@/hooks/use-toast";
 import { Eye, EyeOff } from "lucide-react";
-import { api } from "@/lib/api";
+import { useApi } from "@/components/ApiProvider";
 
 interface LoginFormData {
   email: string;
@@ -24,6 +24,7 @@ interface LoginFormData {
 
 export const LoginForm = () => {
   const router = useRouter();
+  const { apiClient } = useApi();
   const [formData, setFormData] = useState<LoginFormData>({
     email: "",
     password: "",
