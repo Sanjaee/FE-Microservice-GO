@@ -3,6 +3,7 @@ import { useSession } from "next-auth/react";
 import { useRouter } from "next/router";
 import { Navbar } from "@/components/Navbar";
 import { LogoutButton } from "@/components/LogoutButton";
+import { WithAuth } from "@/components/WithAuth";
 import {
   Card,
   CardContent,
@@ -19,7 +20,6 @@ export default function DashboardPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(true);
-console.log(session);
   useEffect(() => {
     if (status === "loading") {
       setIsLoading(true);
@@ -60,86 +60,91 @@ console.log(session);
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <Navbar />
+    <WithAuth>
+      <div className="min-h-screen bg-gray-50">
+        <Navbar />
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Welcome Section */}
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">
-            Welcome back, {session.user?.name || "User"}!
-          </h1>
-          <p className="text-gray-600">
-            Here's what's happening with your account today.
-          </p>
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          {/* Welcome Section */}
+          <div className="mb-8">
+            <h1 className="text-3xl font-bold text-gray-900 mb-2">
+              Welcome back, {session.user?.name || "User"}!
+            </h1>
+            <p className="text-gray-600">
+              Here's what's happening with your account today.
+            </p>
+          </div>
+
+          {/* Stats Cards */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">
+                  Total Orders
+                </CardTitle>
+                <ShoppingBag className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">12</div>
+                <p className="text-xs text-muted-foreground">
+                  +2 from last month
+                </p>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">
+                  Wishlist Items
+                </CardTitle>
+                <Heart className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">8</div>
+                <p className="text-xs text-muted-foreground">
+                  +3 from last week
+                </p>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">
+                  Account Status
+                </CardTitle>
+                <User className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="flex items-center space-x-2">
+                  <Badge
+                    variant={
+                      session.isVerified ? "default" : "destructive"
+                    }
+                  >
+                    {session.isVerified ? "Verified" : "Unverified"}
+                  </Badge>
+                </div>
+                <p className="text-xs text-muted-foreground mt-1">
+                  {session.isVerified ? "Full access" : "Limited access"}
+                </p>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Profile</CardTitle>
+                <Settings className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">Complete</div>
+                <p className="text-xs text-muted-foreground">
+                  Profile setup done
+                </p>
+              </CardContent>
+            </Card>
+          </div>
         </div>
-
-        {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">
-                Total Orders
-              </CardTitle>
-              <ShoppingBag className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">12</div>
-              <p className="text-xs text-muted-foreground">
-                +2 from last month
-              </p>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">
-                Wishlist Items
-              </CardTitle>
-              <Heart className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">8</div>
-              <p className="text-xs text-muted-foreground">+3 from last week</p>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">
-                Account Status
-              </CardTitle>
-              <User className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="flex items-center space-x-2">
-                <Badge
-                  variant={session.user?.isVerified ? "default" : "destructive"}
-                >
-                  {session.user?.isVerified ? "Verified" : "Unverified"}
-                </Badge>
-              </div>
-              <p className="text-xs text-muted-foreground mt-1">
-                {session.user?.isVerified ? "Full access" : "Limited access"}
-              </p>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Profile</CardTitle>
-              <Settings className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">Complete</div>
-              <p className="text-xs text-muted-foreground">
-                Profile setup done
-              </p>
-            </CardContent>
-          </Card>
-        </div>
-
       </div>
-    </div>
+    </WithAuth>
   );
 }

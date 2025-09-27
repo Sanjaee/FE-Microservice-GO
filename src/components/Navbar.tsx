@@ -18,12 +18,8 @@ import { User, LogOut, Settings, ShoppingBag } from "lucide-react";
 export const Navbar = () => {
   const { data: session, status } = useSession();
   const router = useRouter();
-
-  // Debug: Log session data to console
-  console.log("Navbar Session:", session);
-
   const handleLogout = async () => {
-    await signOut({ callbackUrl: "/login" });
+    await signOut({ callbackUrl: "/" });
   };
 
   const getInitials = (name: string) => {

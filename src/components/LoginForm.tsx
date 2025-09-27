@@ -25,6 +25,9 @@ interface LoginFormData {
 export const LoginForm = () => {
   const router = useRouter();
   const { apiClient } = useApi();
+
+  // Get callback URL from query params or default to dashboard
+  const callbackUrl = (router.query.callbackUrl as string) || "/dashboard";
   const [formData, setFormData] = useState<LoginFormData>({
     email: "",
     password: "",
@@ -88,12 +91,25 @@ export const LoginForm = () => {
           title: "✅ Login Berhasil!",
           description: "Selamat datang kembali di ZACloth!",
         });
-        router.push("/dashboard");
+        router.push(callbackUrl);
       } else {
+        let errorMessage = "Email atau password salah. Silakan coba lagi.";
+
+        // Handle specific error messages
+        if (result?.error) {
+          if (result.error.includes("This account was created with Google")) {
+            errorMessage =
+              "This account was created with Google. Please use Google sign-in instead.";
+          } else if (result.error.includes("Invalid credentials")) {
+            errorMessage = "Email atau password salah. Silakan coba lagi.";
+          } else {
+            errorMessage = result.error;
+          }
+        }
+
         toast({
           title: "❌ Login Gagal",
-          description:
-            result?.error || "Email atau password salah. Silakan coba lagi.",
+          description: errorMessage,
           variant: "destructive",
         });
       }
@@ -112,7 +128,46 @@ export const LoginForm = () => {
   const handleGoogleSignIn = async () => {
     setGoogleLoading(true);
     try {
-      await signIn("google", { callbackUrl: "/dashboard" });
+      const result = await signIn("google", {
+        callbackUrl: callbackUrl,
+        redirect: false,
+      });
+
+      if (result?.error) {
+        let errorMessage = "An error occurred during Google authentication";
+
+        switch (result.error) {
+          case "AccessDenied":
+            errorMessage =
+              "This email is already registered with credentials. Please use email/password login instead.";
+            break;
+          case "Configuration":
+            errorMessage = "There is a problem with the server configuration.";
+            break;
+          case "Verification":
+            errorMessage =
+              "The verification token has expired or has already been used.";
+            break;
+          default:
+            errorMessage = `Google authentication error: ${result.error}`;
+        }
+
+        toast({
+          title: "❌ Google Sign-In Failed",
+          description: errorMessage,
+          variant: "destructive",
+        });
+      } else if (result?.ok) {
+        // Success - redirect to callback URL
+        router.push(callbackUrl);
+      }
+    } catch (error) {
+      console.error("Google sign-in error:", error);
+      toast({
+        title: "❌ Google Sign-In Failed",
+        description: "An unexpected error occurred. Please try again.",
+        variant: "destructive",
+      });
     } finally {
       setGoogleLoading(false);
     }

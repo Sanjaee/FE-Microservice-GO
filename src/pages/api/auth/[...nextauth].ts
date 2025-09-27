@@ -68,6 +68,15 @@ export const authOptions: NextAuthOptions = {
           };
         } catch (error) {
           console.error("Authentication error:", error);
+          
+          // Check if it's a specific error from our backend
+          if (error instanceof Error) {
+            if (error.message.includes("This account was created with Google")) {
+              // This will trigger the error message in the frontend
+              throw new Error("This account was created with Google. Please use Google sign-in instead.");
+            }
+          }
+          
           return null;
         }
       },
@@ -95,6 +104,15 @@ export const authOptions: NextAuthOptions = {
           return true;
         } catch (error) {
           console.error("Google OAuth error:", error);
+
+          // Check if it's a specific error from our backend
+          if (error instanceof Error) {
+            if (error.message.includes("already registered with credentials")) {
+              // This will trigger AccessDenied error
+              return false;
+            }
+          }
+
           return false;
         }
       }
