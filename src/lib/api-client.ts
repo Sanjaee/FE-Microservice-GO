@@ -42,8 +42,10 @@ export interface RegisterResponse {
 }
 
 export interface OTPVerifyResponse {
-  message: string;
   user: User;
+  access_token: string;
+  refresh_token: string;
+  expires_in: number;
 }
 
 export interface ResendOTPResponse {

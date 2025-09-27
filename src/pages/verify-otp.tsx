@@ -146,10 +146,10 @@ export default function VerifyOtp() {
     setLoading(true);
 
     try {
-      const data = await api.verifyOTP({
+      const data = (await api.verifyOTP({
         email: userEmail,
         otp_code: otpString,
-      });
+      })) as any;
 
       toast({
         title: "🎉 Berhasil!",
@@ -157,8 +157,36 @@ export default function VerifyOtp() {
           "Email berhasil diverifikasi! Selamat datang di ZACloth. Mengalihkan ke dashboard...",
       });
 
-      // After OTP verification, user needs to login to get tokens
-      router.push("/login");
+      // Auto-login using the JWT tokens from verification
+      try {
+        const loginResult = await signIn("credentials", {
+          accessToken: data.access_token,
+          refreshToken: data.refresh_token,
+          redirect: false,
+        });
+
+        if (loginResult?.ok) {
+          // Login successful, redirect to dashboard
+          router.push("/dashboard");
+        } else {
+          // If auto-login fails, redirect to login page
+          toast({
+            title: "⚠️ Verifikasi Berhasil",
+            description:
+              "Email berhasil diverifikasi. Silakan login untuk melanjutkan.",
+          });
+          router.push("/login");
+        }
+      } catch (loginError) {
+        console.error("Auto-login failed:", loginError);
+        // If auto-login fails, redirect to login page
+        toast({
+          title: "⚠️ Verifikasi Berhasil",
+          description:
+            "Email berhasil diverifikasi. Silakan login untuk melanjutkan.",
+        });
+        router.push("/login");
+      }
     } catch (error) {
       console.error("OTP verification error:", error);
       toast({
