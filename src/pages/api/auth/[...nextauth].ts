@@ -1,9 +1,13 @@
 import NextAuth, { NextAuthOptions } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
-import { api, TokenManager } from "../../../lib/api";
-
+import GoogleProvider from "next-auth/providers/google";
+import { apiClient as api, TokenManager } from "../../../lib/api-client";
 export const authOptions: NextAuthOptions = {
   providers: [
+    GoogleProvider({
+      clientId: process.env.GOOGLE_CLIENT_ID!,
+      clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
+    }),
     CredentialsProvider({
       id: "credentials",
       name: "credentials",
@@ -18,11 +22,13 @@ export const authOptions: NextAuthOptions = {
           // If accessToken is provided (from OTP verification), use it directly
           if (credentials?.accessToken) {
             try {
-              const profile = await api.getProfile(credentials.accessToken);
+              api.setAccessToken(credentials.accessToken);
+              const profile = await api.getProfile();
               return {
                 id: profile.user.id,
                 email: profile.user.email,
                 name: profile.user.username,
+                image: profile.user.image_url || "",
                 accessToken: credentials.accessToken,
                 refreshToken: credentials.refreshToken || "",
                 isVerified: profile.user.is_verified,
@@ -53,6 +59,7 @@ export const authOptions: NextAuthOptions = {
             id: authResponse.user.id,
             email: authResponse.user.email,
             name: authResponse.user.username,
+            image: authResponse.user.image_url || "",
             accessToken: authResponse.access_token,
             refreshToken: authResponse.refresh_token,
             isVerified: authResponse.user.is_verified,
@@ -65,6 +72,31 @@ export const authOptions: NextAuthOptions = {
     }),
   ],
   callbacks: {
+    async signIn({ user, account, profile }) {
+      // Handle Google OAuth
+      if (account?.provider === "google") {
+        try {
+          const authResponse = await api.googleOAuth({
+            email: user.email!,
+            username: user.name || user.email!.split("@")[0],
+            image_url: user.image || "",
+            google_id: account.providerAccountId,
+          });
+
+          // Store the tokens in the user object for the JWT callback
+          user.accessToken = authResponse.access_token;
+          user.refreshToken = authResponse.refresh_token;
+          user.isVerified = authResponse.user.is_verified;
+          user.image = authResponse.user.image_url || user.image;
+
+          return true;
+        } catch (error) {
+          console.error("Google OAuth error:", error);
+          return false;
+        }
+      }
+      return true;
+    },
     async jwt({ token, user, account }) {
       // Initial sign in
       if (account && user) {
@@ -73,6 +105,7 @@ export const authOptions: NextAuthOptions = {
           accessToken: user.accessToken,
           refreshToken: user.refreshToken,
           isVerified: user.isVerified,
+          image: user.image,
           accessTokenExpires: Date.now() + 15 * 60 * 1000, // 15 minutes
         };
       }
@@ -87,6 +120,7 @@ export const authOptions: NextAuthOptions = {
     },
     async session({ session, token }) {
       session.user.id = token.sub as string;
+      session.user.image = token.image as string;
       session.accessToken = token.accessToken as string;
       session.refreshToken = token.refreshToken as string;
       session.isVerified = token.isVerified as boolean;

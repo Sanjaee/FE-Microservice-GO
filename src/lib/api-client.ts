@@ -5,6 +5,7 @@ export interface User {
   id: string;
   username: string;
   email: string;
+  image_url?: string;
   is_verified: boolean;
   created_at: string;
 }
@@ -149,6 +150,18 @@ class ApiClient {
 
   async resendOTP(data: ResendOTPRequest): Promise<ResendOTPResponse> {
     return this.request<ResendOTPResponse>("/api/v1/auth/resend-otp", {
+      method: "POST",
+      body: JSON.stringify(data),
+    });
+  }
+
+  async googleOAuth(data: {
+    email: string;
+    username: string;
+    image_url: string;
+    google_id: string;
+  }): Promise<AuthResponse> {
+    return this.request<AuthResponse>("/api/v1/auth/google-oauth", {
       method: "POST",
       body: JSON.stringify(data),
     });

@@ -18,6 +18,7 @@ declare module "next-auth" {
     id: string;
     email: string;
     name: string;
+    image?: string;
     accessToken: string;
     refreshToken: string;
     isVerified: boolean;
@@ -30,5 +31,6 @@ declare module "next-auth/jwt" {
     refreshToken: string;
     accessTokenExpires: number;
     isVerified: boolean;
+    image?: string;
   }
 }
