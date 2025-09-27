@@ -54,6 +54,28 @@ export interface ResendOTPResponse {
   message: string;
 }
 
+export interface ResetPasswordRequest {
+  email: string;
+}
+
+export interface VerifyResetPasswordRequest {
+  email: string;
+  otp_code: string;
+  new_password: string;
+}
+
+export interface ResetPasswordResponse {
+  message: string;
+}
+
+export interface VerifyResetPasswordResponse {
+  message: string;
+  user: User;
+  access_token: string;
+  refresh_token: string;
+  expires_in: number;
+}
+
 // Product interfaces
 export interface ProductImage {
   id: string;
@@ -216,6 +238,30 @@ class ApiClient {
     });
   }
 
+  async requestResetPassword(
+    data: ResetPasswordRequest
+  ): Promise<ResetPasswordResponse> {
+    return this.request<ResetPasswordResponse>(
+      "/api/v1/auth/request-reset-password",
+      {
+        method: "POST",
+        body: JSON.stringify(data),
+      }
+    );
+  }
+
+  async verifyResetPassword(
+    data: VerifyResetPasswordRequest
+  ): Promise<VerifyResetPasswordResponse> {
+    return this.request<VerifyResetPasswordResponse>(
+      "/api/v1/auth/verify-reset-password",
+      {
+        method: "POST",
+        body: JSON.stringify(data),
+      }
+    );
+  }
+
   // Protected endpoints
   async getProfile(): Promise<{ user: User }> {
     return this.request<{ user: User }>("/api/v1/user/profile", {
@@ -236,29 +282,43 @@ class ApiClient {
   }
 
   // Product endpoints
-  async getProducts(query: ProductQuery = {}): Promise<{ success: boolean; data: ProductListResponse; meta: any }> {
+  async getProducts(
+    query: ProductQuery = {}
+  ): Promise<{ success: boolean; data: ProductListResponse; meta: any }> {
     const params = new URLSearchParams();
-    
-    if (query.page) params.append('page', query.page.toString());
-    if (query.limit) params.append('limit', query.limit.toString());
-    if (query.cursor) params.append('cursor', query.cursor);
-    if (query.search) params.append('search', query.search);
-    if (query.min_price) params.append('min_price', query.min_price.toString());
-    if (query.max_price) params.append('max_price', query.max_price.toString());
-    if (query.is_active !== undefined) params.append('is_active', query.is_active.toString());
-    
+
+    if (query.page) params.append("page", query.page.toString());
+    if (query.limit) params.append("limit", query.limit.toString());
+    if (query.cursor) params.append("cursor", query.cursor);
+    if (query.search) params.append("search", query.search);
+    if (query.min_price) params.append("min_price", query.min_price.toString());
+    if (query.max_price) params.append("max_price", query.max_price.toString());
+    if (query.is_active !== undefined)
+      params.append("is_active", query.is_active.toString());
+
     const queryString = params.toString();
-    const endpoint = queryString ? `/api/v1/products?${queryString}` : '/api/v1/products';
-    
-    return this.request<{ success: boolean; data: ProductListResponse; meta: any }>(endpoint, {
+    const endpoint = queryString
+      ? `/api/v1/products?${queryString}`
+      : "/api/v1/products";
+
+    return this.request<{
+      success: boolean;
+      data: ProductListResponse;
+      meta: any;
+    }>(endpoint, {
       method: "GET",
     });
   }
 
-  async getProductById(id: string): Promise<{ success: boolean; data: Product; meta: any }> {
-    return this.request<{ success: boolean; data: Product; meta: any }>(`/api/v1/products/${id}`, {
-      method: "GET",
-    });
+  async getProductById(
+    id: string
+  ): Promise<{ success: boolean; data: Product; meta: any }> {
+    return this.request<{ success: boolean; data: Product; meta: any }>(
+      `/api/v1/products/${id}`,
+      {
+        method: "GET",
+      }
+    );
   }
 
   // Health check

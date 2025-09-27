@@ -226,6 +226,19 @@ export const LoginForm = () => {
                 </button>
               </div>
             </div>
+
+            {/* Forgot Password Link */}
+            <div className="text-right">
+              <Button
+                type="button"
+                variant="link"
+                className="p-0 h-auto text-sm text-gray-600 hover:text-blue-600"
+                onClick={() => router.push("/reset-password")}
+              >
+                Lupa password?
+              </Button>
+            </div>
+
             <div className="flex flex-col gap-3">
               <Button type="submit" className="w-full" disabled={loading}>
                 {loading ? "Masuk..." : "Masuk"}
