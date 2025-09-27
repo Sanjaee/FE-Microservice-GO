@@ -2,8 +2,6 @@ import React, { useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/router";
 import { Navbar } from "@/components/Navbar";
-import { UserProfile } from "@/components/UserProfile";
-import { UserSessionInfo } from "@/components/UserSessionInfo";
 import { LogoutButton } from "@/components/LogoutButton";
 import {
   Card,
@@ -21,7 +19,7 @@ export default function DashboardPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(true);
-
+console.log(session);
   useEffect(() => {
     if (status === "loading") {
       setIsLoading(true);
@@ -141,11 +139,6 @@ export default function DashboardPage() {
           </Card>
         </div>
 
-        {/* Profile Card */}
-        <UserProfile />
-
-        {/* Session Info Card */}
-        <UserSessionInfo />
       </div>
     </div>
   );

@@ -32,6 +32,7 @@ export const authOptions: NextAuthOptions = {
                 accessToken: credentials.accessToken,
                 refreshToken: credentials.refreshToken || "",
                 isVerified: profile.user.is_verified,
+                type: profile.user.type,
               };
             } catch (error) {
               console.error("Token validation failed:", error);
@@ -63,6 +64,7 @@ export const authOptions: NextAuthOptions = {
             accessToken: authResponse.access_token,
             refreshToken: authResponse.refresh_token,
             isVerified: authResponse.user.is_verified,
+            type: authResponse.user.type,
           };
         } catch (error) {
           console.error("Authentication error:", error);
@@ -87,6 +89,7 @@ export const authOptions: NextAuthOptions = {
           user.accessToken = authResponse.access_token;
           user.refreshToken = authResponse.refresh_token;
           user.isVerified = authResponse.user.is_verified;
+          user.type = authResponse.user.type;
           user.image = authResponse.user.image_url || user.image;
 
           return true;
@@ -105,6 +108,7 @@ export const authOptions: NextAuthOptions = {
           accessToken: user.accessToken,
           refreshToken: user.refreshToken,
           isVerified: user.isVerified,
+          type: user.type,
           image: user.image,
           accessTokenExpires: Date.now() + 15 * 60 * 1000, // 15 minutes
         };
@@ -124,6 +128,7 @@ export const authOptions: NextAuthOptions = {
       session.accessToken = token.accessToken as string;
       session.refreshToken = token.refreshToken as string;
       session.isVerified = token.isVerified as boolean;
+      session.type = token.type as string;
       return session;
     },
   },

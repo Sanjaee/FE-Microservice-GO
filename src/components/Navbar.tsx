@@ -1,4 +1,5 @@
 import React from "react";
+import Image from "next/image";
 import { useSession, signOut } from "next-auth/react";
 import { useRouter } from "next/router";
 import Link from "next/link";
@@ -17,6 +18,9 @@ import { User, LogOut, Settings, ShoppingBag } from "lucide-react";
 export const Navbar = () => {
   const { data: session, status } = useSession();
   const router = useRouter();
+
+  // Debug: Log session data to console
+  console.log("Navbar Session:", session);
 
   const handleLogout = async () => {
     await signOut({ callbackUrl: "/login" });
@@ -38,7 +42,6 @@ export const Navbar = () => {
           {/* Logo */}
           <div className="flex items-center">
             <Link href="/" className="flex items-center space-x-2">
-             
               <span className="text-xl font-bold text-gray-900">ZACloth</span>
             </Link>
           </div>
@@ -105,15 +108,16 @@ export const Navbar = () => {
                       className="relative h-8 w-8 rounded-full"
                     >
                       <Avatar className="h-8 w-8">
-                        <AvatarImage
-                          src={session.user?.image || ""}
+                        <Image
+                          src={
+                            session.user?.image ||
+                            "https://lh3.googleusercontent.com/a/ACg8ocKiDXLiUIp7Lhjq4SkDl51c8iZEBglNLpMP5_pyVrZ9r5OFZUBY=s96-c"
+                          }
+                          width={32}
+                          height={32}
                           alt={session.user?.name || ""}
+                          className="object-cover"
                         />
-                        <AvatarFallback className="bg-gradient-to-r from-blue-600 to-purple-600 text-white text-sm">
-                          {session.user?.name
-                            ? getInitials(session.user.name)
-                            : "U"}
-                        </AvatarFallback>
                       </Avatar>
                     </Button>
                   </DropdownMenuTrigger>

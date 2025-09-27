@@ -12,6 +12,7 @@ declare module "next-auth" {
     accessToken: string;
     refreshToken: string;
     isVerified: boolean;
+    type: string;
   }
 
   interface User {
@@ -22,6 +23,7 @@ declare module "next-auth" {
     accessToken: string;
     refreshToken: string;
     isVerified: boolean;
+    type: string;
   }
 }
 
@@ -31,6 +33,7 @@ declare module "next-auth/jwt" {
     refreshToken: string;
     accessTokenExpires: number;
     isVerified: boolean;
+    type: string;
     image?: string;
   }
 }
