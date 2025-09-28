@@ -50,6 +50,62 @@ export interface OTPVerifyResponse {
   expires_in: number;
 }
 
+export interface Payment {
+  id: string;
+  order_id: string;
+  user_id: string;
+  product_id: string;
+  amount: number;
+  admin_fee: number;
+  total_amount: number;
+  payment_method: string;
+  payment_type: string;
+  status: "PENDING" | "SUCCESS" | "FAILED" | "CANCELLED" | "EXPIRED";
+  notes?: string;
+  snap_redirect_url?: string;
+  midtrans_transaction_id?: string;
+  transaction_status?: string;
+  fraud_status?: string;
+  payment_code?: string;
+  va_number?: string;
+  bank_type?: string;
+  expiry_time?: string;
+  paid_at?: string;
+  created_at: string;
+  updated_at: string;
+  user: User;
+  product?: {
+    id: string;
+    name: string;
+    description: string;
+    price: number;
+    stock: number;
+    is_active: boolean;
+  };
+  actions?: Array<{
+    name: string;
+    method: string;
+    url: string;
+  }>;
+}
+
+export interface CreatePaymentRequest {
+  product_id: string;
+  amount: number;
+  admin_fee: number;
+  payment_method: string;
+  bank_type?: string;
+  notes?: string;
+}
+
+export interface PaymentListResponse {
+  payments: Payment[];
+  total: number;
+  page: number;
+  limit: number;
+  has_more: boolean;
+}
+
 export interface ResendOTPResponse {
   message: string;
 }
@@ -332,6 +388,77 @@ class ApiClient {
         method: "GET",
       }
     );
+  }
+
+  // Payment endpoints
+  async createPayment(paymentData: CreatePaymentRequest): Promise<{
+    success: boolean;
+    data: {
+      payment_id: string;
+      order_id: string;
+      amount: number;
+      payment_method: string;
+      status: string;
+      actions: any[];
+      va_number?: string;
+      bank_type?: string;
+      payment_code?: string;
+      expiry_time?: string;
+      redirect_url?: string;
+    };
+  }> {
+    return this.request<{ success: boolean; data: any }>("/api/v1/payments", {
+      method: "POST",
+      body: JSON.stringify(paymentData),
+    });
+  }
+
+  async getPayment(id: string): Promise<{ success: boolean; data: Payment }> {
+    return this.request<{ success: boolean; data: Payment }>(
+      `/api/v1/payments/${id}`,
+      {
+        method: "GET",
+      }
+    );
+  }
+
+  async getPaymentByOrderId(
+    orderId: string
+  ): Promise<{ success: boolean; data: Payment }> {
+    return this.request<{ success: boolean; data: Payment }>(
+      `/api/v1/payments/order/${orderId}`,
+      {
+        method: "GET",
+      }
+    );
+  }
+
+  async getUserPayments(
+    page: number = 1,
+    limit: number = 10
+  ): Promise<{ success: boolean; data: PaymentListResponse }> {
+    const params = new URLSearchParams();
+    params.append("page", page.toString());
+    params.append("limit", limit.toString());
+
+    return this.request<{ success: boolean; data: PaymentListResponse }>(
+      `/api/v1/payments/user?${params.toString()}`,
+      {
+        method: "GET",
+      }
+    );
+  }
+
+  async getMidtransConfig(): Promise<{
+    success: boolean;
+    data: { client_key: string; environment: string };
+  }> {
+    return this.request<{
+      success: boolean;
+      data: { client_key: string; environment: string };
+    }>("/api/v1/payments/config", {
+      method: "GET",
+    });
   }
 
   // Health check

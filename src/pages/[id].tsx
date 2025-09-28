@@ -314,6 +314,7 @@ export default function ProductDetail() {
                 variant="outline"
                 className="w-full"
                 disabled={!product.is_active || product.stock === 0}
+                onClick={() => router.push(`/checkout/${product.id}`)}
               >
                 Buy Now
               </Button>
