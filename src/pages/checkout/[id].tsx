@@ -120,7 +120,7 @@ export default function CheckoutPage() {
   const [submitting, setSubmitting] = useState(false);
   const [selectedPaymentMethod, setSelectedPaymentMethod] =
     useState<string>("bank_transfer");
-  const [selectedBankType, setSelectedBankType] = useState<string>("bni");
+  const [selectedBankType, setSelectedBankType] = useState<string>("bca");
   const [selectedStoreType, setSelectedStoreType] =
     useState<string>("alfamart");
   const [notes, setNotes] = useState<string>("");
