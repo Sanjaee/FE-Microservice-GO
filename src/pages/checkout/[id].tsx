@@ -173,6 +173,7 @@ export default function CheckoutPage() {
 
       const paymentData = {
         product_id: product.id,
+        user_id: session.user.id, // Send user_id from JWT session
         amount: Math.round(product.price), // Amount in rupiah
         admin_fee: Math.round(adminFee), // Admin fee in rupiah
         payment_method: selectedPaymentMethod,
