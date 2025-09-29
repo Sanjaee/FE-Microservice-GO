@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/router";
 import { useSession } from "next-auth/react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -121,12 +121,36 @@ export default function PaymentPage() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [isPolling, setIsPolling] = useState(false);
+  const pollingIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const hasShownSuccessToast = useRef(false);
 
   useEffect(() => {
     if (id && status !== "loading") {
       fetchPayment();
     }
   }, [id, status]);
+
+  // Auto-polling effect for pending payments
+  useEffect(() => {
+    if (payment && isPaymentPending(payment.status) && !isPolling) {
+      const paymentAge = Date.now() - new Date(payment.created_at).getTime();
+      const maxAge = 30 * 60 * 1000; // 30 minutes
+
+      // Only start polling if payment is not too old
+      if (paymentAge < maxAge) {
+        startPolling();
+      }
+    }
+  }, [payment?.status]);
+
+  // Cleanup polling on component unmount
+  useEffect(() => {
+    return () => {
+      if (pollingIntervalRef.current) {
+        clearTimeout(pollingIntervalRef.current);
+      }
+    };
+  }, []);
 
   const fetchPayment = async () => {
     try {
@@ -168,53 +192,163 @@ export default function PaymentPage() {
     copyToClipboard(text, label);
   };
 
-  const fetchPaymentStatus = async (isManual = false) => {
-    if (isManual) {
-      setRefreshing(true);
-    } else {
-      setIsPolling(true);
+  const fetchPaymentStatus = async (showLoading = true) => {
+    try {
+      if (showLoading) {
+        setRefreshing(true);
+      }
+
+      if (payment?.id) {
+        // Use manual status check endpoint for both manual and auto polling
+        const response = await apiClient.checkPaymentStatus(payment.id);
+        setPayment(response.data);
+
+        // Check if payment is successful and show toast
+        if (
+          isPaymentSuccessful(response.data.status) &&
+          !hasShownSuccessToast.current
+        ) {
+          hasShownSuccessToast.current = true;
+          toast({
+            title: "Payment Successful! 🎉",
+            description: "Your payment has been processed successfully.",
+            duration: 5000,
+          });
+
+          // Stop polling when payment is successful
+          stopPolling();
+        }
+
+        // Show status change notification for manual refresh
+        if (showLoading && response.status_changed) {
+          toast({
+            title: "Status Updated!",
+            description: `Payment status changed from ${response.old_status} to ${response.new_status}`,
+          });
+        } else if (showLoading && !response.status_changed) {
+          toast({
+            title: "Status Checked",
+            description: "Payment status is up to date",
+          });
+        }
+      } else {
+        // Fallback to regular fetch
+        await fetchPayment();
+      }
+    } catch (error) {
+      console.error("Error fetching payment status:", error);
+      if (showLoading) {
+        toast({
+          title: "Error",
+          description: "Failed to refresh payment status",
+          variant: "destructive",
+        });
+      }
+    } finally {
+      if (showLoading) {
+        setRefreshing(false);
+      }
     }
+  };
 
-    await fetchPayment();
+  const startPolling = () => {
+    if (pollingIntervalRef.current) return;
 
-    if (isManual) {
-      setRefreshing(false);
-    } else {
+    setIsPolling(true);
+    let pollCount = 0;
+    const maxPolls = 10; // Maximum 10 polls total
+
+    const poll = () => {
+      pollCount++;
+
+      // Stop polling after max attempts or if payment is successful
+      if (pollCount >= maxPolls || isPaymentSuccessful(payment?.status || "")) {
+        stopPolling();
+        return;
+      }
+
+      fetchPaymentStatus(false); // Don't show loading during polling
+    };
+
+    // Smart polling: start fast, then slow down
+    // First 3 polls: every 2 seconds
+    // Next 4 polls: every 5 seconds
+    // Last 3 polls: every 10 seconds
+    const getPollInterval = (count: number) => {
+      if (count <= 3) return 2000; // 2 seconds
+      if (count <= 7) return 5000; // 5 seconds
+      return 10000; // 10 seconds
+    };
+
+    const scheduleNextPoll = () => {
+      if (pollCount >= maxPolls || isPaymentSuccessful(payment?.status || "")) {
+        stopPolling();
+        return;
+      }
+
+      const interval = getPollInterval(pollCount);
+      pollingIntervalRef.current = setTimeout(() => {
+        poll();
+        scheduleNextPoll();
+      }, interval);
+    };
+
+    // Start with immediate poll
+    poll();
+    scheduleNextPoll();
+  };
+
+  const stopPolling = () => {
+    if (pollingIntervalRef.current) {
+      clearTimeout(pollingIntervalRef.current);
+      pollingIntervalRef.current = null;
       setIsPolling(false);
     }
   };
 
   const isPaymentSuccessful = (status: string) => {
-    return status === "SUCCESS";
+    return (
+      status?.toLowerCase() === "success" ||
+      status?.toLowerCase() === "settlement" ||
+      status?.toLowerCase() === "capture"
+    );
+  };
+
+  const isPaymentPending = (status: string) => {
+    return status?.toLowerCase() === "pending";
   };
 
   const getStatusColor = (status: string) => {
-    switch (status) {
-      case "SUCCESS":
+    switch (status?.toLowerCase()) {
+      case "success":
+      case "settlement":
+      case "capture":
         return "bg-green-100 text-green-800";
-      case "PENDING":
+      case "pending":
         return "bg-yellow-100 text-yellow-800";
-      case "FAILED":
-      case "CANCELLED":
+      case "failed":
+      case "deny":
+      case "cancel":
+      case "expire":
         return "bg-red-100 text-red-800";
-      case "EXPIRED":
-        return "bg-orange-100 text-orange-800";
       default:
         return "bg-gray-100 text-gray-800";
     }
   };
 
   const getStatusIcon = (status: string) => {
-    switch (status) {
-      case "SUCCESS":
+    switch (status?.toLowerCase()) {
+      case "success":
+      case "settlement":
+      case "capture":
         return <CheckCircle className="h-3 w-3" />;
-      case "PENDING":
+      case "pending":
         return <Clock className="h-3 w-3" />;
-      case "FAILED":
-      case "CANCELLED":
+      case "failed":
+      case "deny":
+      case "cancel":
+      case "expire":
         return <XCircle className="h-3 w-3" />;
-      case "EXPIRED":
-        return <Clock className="h-3 w-3" />;
       default:
         return <Clock className="h-3 w-3" />;
     }
@@ -313,14 +447,45 @@ export default function PaymentPage() {
                 Please complete the payment through the GoPay app
               </p>
             </div>
-            {payment.snap_redirect_url && (
-              <Button
-                onClick={() => window.open(payment.snap_redirect_url, "_blank")}
-                className="w-full"
-              >
-                <ExternalLink className="mr-2 h-4 w-4" />
-                Open GoPay
-              </Button>
+
+            {/* Product ID Display */}
+            {payment.product_id && (
+              <div className="bg-blue-50 border border-blue-200 p-3 rounded-lg">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-blue-800">
+                    <strong>Product ID:</strong> {payment.product_id}
+                  </span>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => handleCopy(payment.product_id, "Product ID")}
+                    className="h-6 w-6 p-0"
+                  >
+                    <Copy className="h-3 w-3" />
+                  </Button>
+                </div>
+              </div>
+            )}
+
+            {/* QR Code Display for GoPay */}
+            {payment.snap_redirect_url ? (
+              <div className="text-center">
+                <div className="inline-block bg-white border-2 border-gray-200 rounded-lg p-4">
+                  <img
+                    src={payment.snap_redirect_url}
+                    alt="GoPay QR Code"
+                    className="w-48 h-48 mx-auto"
+                  />
+                </div>
+                <p className="text-sm text-gray-600 mt-2">
+                  Scan this QR code with your GoPay app
+                </p>
+              </div>
+            ) : (
+              <div className="text-center p-8 bg-gray-50 rounded-lg">
+                <Smartphone className="h-16 w-16 mx-auto text-gray-400 mb-4" />
+                <p className="text-gray-500">GoPay payment not available</p>
+              </div>
             )}
           </div>
         );
@@ -336,14 +501,45 @@ export default function PaymentPage() {
                 Scan the QR code with your mobile banking app
               </p>
             </div>
-            {payment.snap_redirect_url && (
-              <Button
-                onClick={() => window.open(payment.snap_redirect_url, "_blank")}
-                className="w-full"
-              >
-                <QrCode className="mr-2 h-4 w-4" />
-                View QR Code
-              </Button>
+
+            {/* Product ID Display */}
+            {payment.product_id && (
+              <div className="bg-blue-50 border border-blue-200 p-3 rounded-lg">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-blue-800">
+                    <strong>Product ID:</strong> {payment.product_id}
+                  </span>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => handleCopy(payment.product_id, "Product ID")}
+                    className="h-6 w-6 p-0"
+                  >
+                    <Copy className="h-3 w-3" />
+                  </Button>
+                </div>
+              </div>
+            )}
+
+            {/* QR Code Display */}
+            {payment.snap_redirect_url ? (
+              <div className="text-center">
+                <div className="inline-block bg-white border-2 border-gray-200 rounded-lg p-4">
+                  <img
+                    src={payment.snap_redirect_url}
+                    alt="QR Code for Payment"
+                    className="w-48 h-48 mx-auto"
+                  />
+                </div>
+                <p className="text-sm text-gray-600 mt-2">
+                  Scan this QR code with your mobile banking app
+                </p>
+              </div>
+            ) : (
+              <div className="text-center p-8 bg-gray-50 rounded-lg">
+                <QrCode className="h-16 w-16 mx-auto text-gray-400 mb-4" />
+                <p className="text-gray-500">QR Code not available</p>
+              </div>
             )}
           </div>
         );
@@ -781,6 +977,14 @@ export default function PaymentPage() {
                       </span>
                     </div>
                   )}
+                  {isPolling &&
+                    payment?.status?.toLowerCase() === "pending" && (
+                      <div className="text-center text-xs text-blue-500">
+                        <span>
+                          🔄 Smart polling active (will stop automatically)
+                        </span>
+                      </div>
+                    )}
                 </div>
               </CardContent>
             </Card>

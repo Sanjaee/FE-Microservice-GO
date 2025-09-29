@@ -9,6 +9,7 @@ interface VirtualAccountDisplayProps {
     bank_type?: string;
     total_amount: number;
     expiry_time?: string;
+    product_id?: string;
   };
   onCopy: (text: string, label: string) => void;
 }
@@ -44,6 +45,25 @@ export default function VirtualAccountDisplay({
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
+        {/* Product ID Display */}
+        {paymentData.product_id && (
+          <div className="bg-green-50 border border-green-200 p-3 rounded-lg">
+            <div className="flex items-center justify-between">
+              <span className="text-sm text-green-800">
+                <strong>Product ID:</strong> {paymentData.product_id}
+              </span>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => onCopy(paymentData.product_id!, "Product ID")}
+                className="h-6 w-6 p-0"
+              >
+                <Copy className="h-3 w-3" />
+              </Button>
+            </div>
+          </div>
+        )}
+
         <div className="bg-blue-50 p-4 rounded-lg">
           <div className="space-y-3">
             <div className="flex items-center justify-between">

@@ -405,6 +405,24 @@ class ApiClient {
     );
   }
 
+  async checkPaymentStatus(id: string): Promise<{
+    success: boolean;
+    data: Payment;
+    status_changed: boolean;
+    old_status: string;
+    new_status: string;
+  }> {
+    return this.request<{
+      success: boolean;
+      data: Payment;
+      status_changed: boolean;
+      old_status: string;
+      new_status: string;
+    }>(`/api/v1/payments/${id}/check-status`, {
+      method: "GET",
+    });
+  }
+
   async getPaymentByOrderId(
     orderId: string
   ): Promise<{ success: boolean; data: Payment }> {
