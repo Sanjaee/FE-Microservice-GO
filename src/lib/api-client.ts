@@ -219,37 +219,20 @@ class ApiClient {
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
 
-        // Handle specific error cases with detailed messages
-        if (response.status === 409) {
-          throw new Error(
-            errorData.message ||
-              errorData.error ||
-              "User with this email or username already exists"
-          );
-        } else if (response.status === 400) {
-          throw new Error(
-            errorData.message || errorData.error || "Invalid request data"
-          );
-        } else if (response.status === 401) {
-          // For 401 errors, prioritize the message field for better user experience
-          throw new Error(
-            errorData.message || errorData.error || "Unauthorized"
-          );
-        } else if (response.status === 404) {
-          throw new Error(
-            errorData.message || errorData.error || "Resource not found"
-          );
-        } else if (response.status === 500) {
-          throw new Error(
-            errorData.message || errorData.error || "Internal server error"
-          );
-        }
-
-        throw new Error(
+        // Create error with response data preserved
+        const error = new Error(
           errorData.message ||
             errorData.error ||
             `HTTP ${response.status}: ${response.statusText}`
-        );
+        ) as any;
+
+        // Preserve response data for frontend error handling
+        error.response = {
+          status: response.status,
+          data: errorData,
+        };
+
+        throw error;
       }
 
       return await response.json();

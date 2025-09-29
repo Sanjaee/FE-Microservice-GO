@@ -75,6 +75,24 @@ const paymentMethods: PaymentMethod[] = [
     icon: <QrCode className="h-5 w-5" />,
     description: "Scan QR Code",
   },
+  {
+    value: "echannel",
+    label: "Mandiri E-Channel",
+    icon: <Building2 className="h-5 w-5" />,
+    description: "ATM Mandiri",
+  },
+  {
+    value: "permata",
+    label: "Permata VA",
+    icon: <Building2 className="h-5 w-5" />,
+    description: "Virtual Account Permata",
+  },
+  {
+    value: "cstore",
+    label: "Convenience Store",
+    icon: <Building2 className="h-5 w-5" />,
+    description: "Alfamart & Indomaret",
+  },
 ];
 
 const bankTypes = [
@@ -83,6 +101,12 @@ const bankTypes = [
   { value: "bri", label: "BRI" },
   { value: "mandiri", label: "Mandiri" },
   { value: "permata", label: "Permata" },
+  { value: "cimb", label: "CIMB" },
+];
+
+const storeTypes = [
+  { value: "alfamart", label: "Alfamart" },
+  { value: "indomaret", label: "Indomaret" },
 ];
 
 export default function CheckoutPage() {
@@ -91,14 +115,14 @@ export default function CheckoutPage() {
   const { toast } = useToast();
   const { id } = router.query;
 
-  console.log(session);
-
   const [product, setProduct] = useState<Product | null>(null);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [selectedPaymentMethod, setSelectedPaymentMethod] =
     useState<string>("bank_transfer");
-  const [selectedBankType, setSelectedBankType] = useState<string>("bca");
+  const [selectedBankType, setSelectedBankType] = useState<string>("bni");
+  const [selectedStoreType, setSelectedStoreType] =
+    useState<string>("alfamart");
   const [notes, setNotes] = useState<string>("");
   const [adminFee, setAdminFee] = useState<number>(2500);
 
@@ -149,13 +173,15 @@ export default function CheckoutPage() {
 
       const paymentData = {
         product_id: product.id,
-        amount: product.price * 100, // Convert to cents
-        admin_fee: adminFee * 100, // Convert to cents
+        amount: Math.round(product.price), // Amount in rupiah
+        admin_fee: Math.round(adminFee), // Admin fee in rupiah
         payment_method: selectedPaymentMethod,
         bank_type:
           selectedPaymentMethod === "bank_transfer"
             ? selectedBankType
             : undefined,
+        store_type:
+          selectedPaymentMethod === "cstore" ? selectedStoreType : undefined,
         notes: notes || undefined,
       };
 
@@ -167,11 +193,45 @@ export default function CheckoutPage() {
       router.push(`/payment/${payment.payment_id}`);
     } catch (error: any) {
       console.error("Error creating payment:", error);
-      toast({
-        title: "Error",
-        description: error.response?.data?.error || "Failed to create payment",
-        variant: "destructive",
-      });
+      console.error("Error response:", error.response?.data);
+      console.error("Error status:", error.response?.status);
+
+      // Handle 505 and 500 error specifically - don't redirect to payment page
+      const errorMessage = error.message || error.response?.data?.message || "";
+      const errorDetails = error.response?.data?.details || "";
+
+      if (
+        error.response?.status === 505 ||
+        error.response?.status === 500 ||
+        error.response?.status === 503 ||
+        errorMessage.includes("temporarily unavailable") ||
+        errorMessage.includes("maintenance") ||
+        errorMessage.includes("Unable to create va_number") ||
+        errorMessage.includes("system is recovering") ||
+        errorDetails.includes("505") ||
+        errorDetails.includes("500") ||
+        errorDetails.includes("Unable to create va_number") ||
+        errorDetails.includes("system is recovering")
+      ) {
+        toast({
+          title: "Metode Pembayaran Sedang Maintenance",
+          description: errorMessage.includes("maintenance")
+            ? errorMessage
+            : "Metode pembayaran sedang maintenance, silakan pilih metode lain (BNI, BCA, BRI, Mandiri, GoPay, QRIS, atau Credit Card)",
+          variant: "destructive",
+        });
+        // Don't redirect to payment page for 505 errors
+        return;
+      } else {
+        toast({
+          title: "Error",
+          description:
+            errorMessage ||
+            error.response?.data?.error ||
+            "Failed to create payment",
+          variant: "destructive",
+        });
+      }
     } finally {
       setSubmitting(false);
     }
@@ -343,6 +403,28 @@ export default function CheckoutPage() {
                       {bankTypes.map((bank) => (
                         <SelectItem key={bank.value} value={bank.value}>
                           {bank.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+
+              {/* Store Selection for Cstore */}
+              {selectedPaymentMethod === "cstore" && (
+                <div className="space-y-2">
+                  <Label htmlFor="store-type">Select Store</Label>
+                  <Select
+                    value={selectedStoreType}
+                    onValueChange={setSelectedStoreType}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select store" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {storeTypes.map((store) => (
+                        <SelectItem key={store.value} value={store.value}>
+                          {store.label}
                         </SelectItem>
                       ))}
                     </SelectContent>
